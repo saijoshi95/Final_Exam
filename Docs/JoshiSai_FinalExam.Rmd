@@ -1,0 +1,85 @@
+---
+title: "Final Exam"
+author: "Sai Joshi
+date: "2021/12/15"
+output: 
+  rmdformats::downcute:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(tidycensus)
+library(readxl)
+library(knitr)
+library(tigris)
+library(sf)
+library(gridExtra)
+library(jtools)
+library(interactions)
+```
+# Question 01: What was the average change in sales for Main Street businesses? Did sales increase or decrease, on average? How confident are you about that?
+
+Method: Running a sample t test. 
+
+t.test(Main_st_data$pct_sales_chng)
+
+# Observations for Question 01: 
+The mean obtained is xx which indicates that there is a xx% increase in sales at an average as the number is positive. Further, the 95-percent confidence interval is xx%. The P-value is xx and is very close to 0. Hence, we can be 99-percent confident there there has infact been an increase in sales for Main Street Businesses. 
+
+# Question 02: Did the cost of parking change more for some types of businesses than for others? How confident are you about those differences?
+
+Method: Running a bivariate regression. 
+
+*Step 1: Finding the most common store type
+
+Main_st_data %>%
+  group_by(type) %>%
+  summarise(number= n()) %>%
+  mutate(percent = round (100 *number / sum (number))) %>%
+  arrange(desc(number))
+
+Observation: 
+
+* Step 2: Since xx stores are the most common type, comparing everything back to it: 
+
+Main_st_data <- Main_st_data %>%
+  mutate(type = as.factor(type)) %>%
+  mutate(type = relevel(type, "Clothing"))
+
+Observation: 
+
+*Step 3: Running the bivariate regression to see which types had changes in parking costs that were different than the ones for xx store:  
+
+parking_cost_by_type <- lm(parking_cost_change ~ type, data = Main_st_data)
+
+#Observations for Question 02: 
+The intercept indicates that the average change in parking costs for the base case of xx stores was an increase in xx%. (Go down the list and explain the increase or decrease for all stores + statistical significance)
+
+#Question 03: Not counting any kind of effect of the changes to parking and cycling have had, what kind of effect did it have on businesses if the closest transit stop got closer or further away?
+
+Method: Running a regression model that will predict the effect of change in distance to transit on the percent change in sales, controlling for change in parking supply, changes in parking price, and changes in bike traffic. 
+
+model_1 <- lm(pct_sales_chng ~ transit_dist + parking_cost_change + lost_parking + bike_chng, data = Main_st_data)
+
+#Observations for Question 03: 
+As the transit distance increases per mile, the sales have decreased/increased by xx% - while controlling for differences in change in parking costs, parking supply and bike volume. This is also statistically significant based on the p-value. (Talk about other variables too)
+
+#Question 04: Was the effect of transit on sales different for some types of businesses than for others? What was the difference, if any?
+
+Method: Estimating a regression model between transit distance and business type. For consistence with previous models, keeping controls for parking and cycling. Hypothesizing that the distance from a transit stop has an effect on different types of stores when considering how much their sales have changed. 
+
+model_2 <- lm(pct_sales_chng ~ type + transit_dist + parking_cost_change + lost_parking + bike_chng + type:transit_dist, data = Main_st_data)
+
+#Observations for Question 04: 
+For Transit Distance: For each additional mile away, there is a xx% decrease/increase in sales. (then do it for the colon rows and then mention statistical significance)
+
+#Visualisation (Question 04)
+
+interact_plot(model_2, pred = transit_dist, interval = TRUE, modx = type)
+
+Observations: 
